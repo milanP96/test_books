@@ -1,0 +1,57 @@
+version: "3"
+volumes:
+  pgdata:
+  static_files:
+  media_files:
+  pgadmin:
+services:
+  python: &python
+    build:
+      context: .
+      dockerfile: docker/dev/python/Dockerfile
+    user: 1000:1000
+    volumes:
+      - ./backend:/backend
+      - static_files:/vol/web/static
+      - media_files:/vol/web/media
+    depends_on: 
+      - db
+    ports:
+      - 8000:8000
+    environment:
+      HOST: 0.0.0.0
+    networks:
+      - db-net
+    command: python manage.py runserver 0.0.0.0:8000
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: books
+      POSTGRES_DB: books
+      POSTGRES_PASS: books
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    restart: unless-stopped
+    networks:
+      - db-net
+  front:
+    build:
+      context: .
+      dockerfile: docker/dev/front/Dockerfile
+    restart: always
+    working_dir: /src
+    volumes:
+      - ./front:/src
+    ports:
+      - 8080:8080
+    tty: true
+      #environment:
+      #HOST: 0.0.0.0
+        #VUE_APP_API_URL: http://localhost:8000/api/
+    command: bash -c "npm i && npm run serve"
+
+networks:
+  db-net:
